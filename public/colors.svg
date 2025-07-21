@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <!-- Background -->
+  <rect x="0" y="0" width="300" height="300" fill="#f0f0f0" />
+
+  <!-- Colorable Regions -->
+  <path id="region-1" d="M20,20 h100 v100 h-100 z" fill="#ff9999" />
+  <path id="region-2" d="M180,20 h100 v100 h-100 z" fill="#99ccff" />
+  <path id="region-3" d="M100,150 h100 v100 h-100 z" fill="#99ff99" />
+
+  <!-- Just for fun, a circle -->
+  <circle id="region-4" cx="150" cy="150" r="30" fill="#fbbf24" />
+
+  <!-- A triangle -->
+  <polygon id="region-5" points="150,250 180,290 120,290" fill="#a78bfa" />
+</svg>
+
