@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import './App.css';
 
 function App() {
-  const [svgElements, setSvgElements] = useState([]); // stores parsed React-friendly SVG elements
-  const [regionColors, setRegionColors] = useState({}); // maps element ids to colors
-  const [selectedId, setSelectedId] = useState(null);
+  const [svgElements, setSvgElements] = useState([]);
+  const [regionColors, setRegionColors] = useState({});
+  const [originalColors, setOriginalColors] = useState({});
+  const [selectedColor, setSelectedColor] = useState(null);
 
-  // Handle SVG Upload & Parse into React elements
-  const handleFileUpload = async (event) => {
+  // ✅ Parse uploaded SVG into React-friendly elements
+  const handleSVGUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !file.type.includes('svg')) {
       alert('Please upload a valid SVG file');
@@ -15,19 +16,24 @@ function App() {
     }
 
     const text = await file.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'image/svg+xml');
+    parseSVGString(text);
+  };
 
-    // Get all shape elements we want to make clickable
+  const parseSVGString = (svgString) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgString, 'image/svg+xml');
     const shapeElements = doc.querySelectorAll('path, rect, circle, polygon');
 
-    const newColors = {};
+    const newRegionColors = {};
+    const newOriginalColors = {};
+
     const reactElements = Array.from(shapeElements).map((el, index) => {
       const id = el.id || `region-${index}`;
       const fill = el.getAttribute('fill') || '#cccccc';
-      newColors[id] = fill;
 
-      // Save the element type & its attributes
+      newRegionColors[id] = fill;   // current colors
+      newOriginalColors[id] = fill; // ✅ store original color permanently
+
       return {
         id,
         type: el.tagName,
@@ -38,25 +44,41 @@ function App() {
     });
 
     setSvgElements(reactElements);
-    setRegionColors(newColors);
-    setSelectedId(null);
+    setRegionColors(newRegionColors);
+    setOriginalColors(newOriginalColors);
+    setSelectedColor(null);
   };
 
-  // Change selected region's color
-  const changeColor = (color) => {
-    if (!selectedId) return;
-    setRegionColors((prev) => ({
-      ...prev,
-      [selectedId]: color,
-    }));
+  // ✅ When clicking a region, group by original color
+  const handleRegionClick = (id) => {
+    setSelectedColor(originalColors[id]);
+  };
+
+  // ✅ Change all regions that originally shared the selected color
+  const changeColor = (newColor) => {
+    if (!selectedColor) return;
+
+    setRegionColors((prev) => {
+      const updated = { ...prev };
+      Object.keys(prev).forEach((regionId) => {
+        if (originalColors[regionId] === selectedColor) {
+          updated[regionId] = newColor;
+        }
+      });
+      return updated;
+    });
+
+    setSelectedColor(null); // reset after change
   };
 
   return (
     <div className="App" style={{ textAlign: 'center', padding: '1rem' }}>
-      <h2>SVG Recoloring (React Way)</h2>
-      <input type="file" accept=".svg" onChange={handleFileUpload} />
+      <h2>SVG Recoloring (Grouped by Original Color)</h2>
 
-      {/* Render SVG if uploaded */}
+      {/* File Upload */}
+      <input type="file" accept=".svg" onChange={handleSVGUpload} />
+
+      {/* Render SVG */}
       {svgElements.length > 0 && (
         <svg
           viewBox="0 0 300 300"
@@ -69,17 +91,18 @@ function App() {
           }}
         >
           {svgElements.map(({ id, type, props }) => {
-            const Tag = type; // path, rect, etc.
+            const Tag = type;
+            const currentColor = regionColors[id];
             return (
               <Tag
                 key={id}
                 {...props}
                 id={id}
-                fill={regionColors[id]}
-                stroke={selectedId === id ? 'black' : props.stroke}
-                strokeWidth={selectedId === id ? 2 : props.strokeWidth}
+                fill={currentColor}
+                stroke={selectedColor === originalColors[id] ? 'black' : props.stroke}
+                strokeWidth={selectedColor === originalColors[id] ? 2 : props.strokeWidth}
                 style={{ cursor: 'pointer' }}
-                onClick={() => setSelectedId(id)}
+                onClick={() => handleRegionClick(id)}
               />
             );
           })}
@@ -87,9 +110,9 @@ function App() {
       )}
 
       {/* Color Picker Buttons */}
-      {selectedId && (
+      {selectedColor && (
         <div style={{ marginTop: '1rem' }}>
-          <p>Selected: {selectedId}</p>
+          <p>Selected original color: {selectedColor}</p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
             {['#f87171', '#60a5fa', '#34d399', '#fbbf24', '#a78bfa'].map((color) => (
               <button
@@ -99,7 +122,8 @@ function App() {
                   width: 40,
                   height: 40,
                   backgroundColor: color,
-                  border: '1px solid #333',
+                  border:
+                    selectedColor === color ? '2px solid black' : '1px solid #333',
                   cursor: 'pointer',
                 }}
               />
